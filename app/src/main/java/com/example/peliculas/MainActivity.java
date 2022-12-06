@@ -26,7 +26,7 @@ public class MainActivity extends AppCompatActivity {
     EditText jetcodigo,jetnombre;
     RadioButton jrbaccion,jrbfantasia,jrbsuspenso;
     CheckBox jcbactivo;
-    String codigo,nombre,genero,num_pel;
+    String codigo,nombre,genero,identPelicula;
     boolean respuesta;
     FirebaseFirestore db = FirebaseFirestore.getInstance();
 
@@ -43,37 +43,41 @@ public class MainActivity extends AppCompatActivity {
         jcbactivo=findViewById(R.id.cbactivo);
     }
 
-    public void Adicionar(View view){
-        codigo=jetcodigo.getText().toString();
-        nombre=jetnombre.getText().toString();
-        if (codigo.isEmpty() || nombre.isEmpty()){
-            Toast.makeText(this, "Los campos son obligatorios", Toast.LENGTH_SHORT).show();
-        }
-        else{
-            if (jrbaccion.isChecked())
-                genero="Accion";
+    private Map<String,Object> contenido(String codigo, String nombre, String genero, String activo){
+        Map<String,Object> cartelera=new HashMap<>();
+
+        Map<String, Object> pelicula = new HashMap<>();
+        pelicula.put("Codigo", codigo);
+        pelicula.put("Nombre", nombre);
+        pelicula.put("Genero", genero);
+        pelicula.put("Activo", activo);
+
+        return cartelera;
+    }
+
+    private String generoPelicula(){
+        if (jrbaccion.isChecked())
+            genero="Accion";
+        else {
+            if (jrbfantasia.isChecked())
+                genero = "Fantasia";
             else {
-                if (jrbfantasia.isChecked())
-                    genero="Fantasia";
-                else {
-                    genero="Suspenso";
-                }
+                genero = "Suspenso";
             }
+        }
+        return genero;
 
-            // Create a new user with a first and last name
-            Map<String, Object> pelicula = new HashMap<>();
-            pelicula.put("Codigo", codigo);
-            pelicula.put("Nombre", nombre);
-            pelicula.put("Activo", "si");
+    }
 
-// Add a new document with a generated ID
-            db.collection("Funciones")
-                    .add(pelicula)
+    private void peliculasBaseDatos(String nombreBaseDatos, Map<String,Object> documentoPelicula, String cambioActivo){
+        if (cambioActivo.equalsIgnoreCase("add")){
+            db.collection(nombreBaseDatos)
+                    .add(documentoPelicula)
                     .addOnSuccessListener(new OnSuccessListener<DocumentReference>() {
                         @Override
                         public void onSuccess(DocumentReference documentReference) {
                             //Log.d(TAG, "DocumentSnapshot added with ID: " + documentReference.getId());
-                            Toast.makeText(MainActivity.this, "Pelicula añadida", Toast.LENGTH_SHORT).show();
+                            mensajeUsuario("Pelicula añadida");
                         }
                     })
                     .addOnFailureListener(new OnFailureListener() {
@@ -81,45 +85,101 @@ public class MainActivity extends AppCompatActivity {
                         public void onFailure(@NonNull Exception e) {
                             //Log.w(TAG, "Error adding document", e);
                             //System.out.println("errorrrrrrrrrrrrrrrr" + e);
-                            Toast.makeText(MainActivity.this, "Error al añadir pelicula", Toast.LENGTH_SHORT).show();
+                            mensajeUsuario("Error al añadir pelicula");
                         }
                     });
+        }
+        else {
+            db.collection(nombreBaseDatos)
+                    .document(identPelicula)
+                    .set(documentoPelicula)
+                    .addOnSuccessListener(new OnSuccessListener<Void>() {
+                        @Override
+                        public void onSuccess(Void aVoid) {
+                            //Log.d(TAG, "DocumentSnapshot added with ID: " + documentReference.getId());
+                            mensajeUsuario("Documento anulada con exito");
+                        }
+                    })
+                    .addOnFailureListener(new OnFailureListener() {
+                        @Override
+                        public void onFailure(@NonNull Exception e) {
+                            //Log.w(TAG, "Error adding document", e);
+                            //System.out.println("errorrrrrrrrrrrrrrrr" + e);
+                            mensajeUsuario("Error al anular documento");
+                        }
+                    });
+
+        }
+
+
+
+    }
+
+    public void Adicionar(View view){
+        codigo=jetcodigo.getText().toString();
+        nombre=jetnombre.getText().toString();
+        if (codigo.isEmpty() || nombre.isEmpty()){
+            mensajeUsuario("Los campos son obligatorios");
+        }
+        else{
+            String genero = generoPelicula();
+
+            // Create a new user with a first and last name
+            Map<String, Object> pelicula = contenido(codigo,nombre,genero,"si");
+
+            // Add a new document with a generated ID
+            peliculasBaseDatos("Funciones", pelicula, "add");
+            Limpiar_campos();
+
         }
     }
     ///error en el boton pue a buscar me saca de la app
     public void Consultar(View view){
         codigo=jetcodigo.getText().toString();
         if (codigo.isEmpty()) {
-            Toast.makeText(this, "Es necesario el código", Toast.LENGTH_SHORT).show();
+            mensajeUsuario("Es necesario el código");
             jetcodigo.requestFocus();
         }
-        else{
+        else {
             db.collection("Funciones")
                     .whereEqualTo("Codigo",codigo)
                     .get()
                     .addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
                         @Override
                         public void onComplete(@NonNull Task<QuerySnapshot> task) {
-                            if (task.isSuccessful()) {
-                                respuesta = true;
-                                for (QueryDocumentSnapshot document : task.getResult()) {
-                                    num_pel=document.getId();
-                                    jetnombre.setText(document.getString("Nombre"));
-                                    if(document.getString("Genero").equals("Accion"))
-                                        jrbaccion.setChecked(true);
-                                    else
-                                    if(document.getString("Genero").equals("Fantasia"))
-                                        jrbfantasia.setChecked(true);
-                                    else
-                                        jrbsuspenso.setChecked(true);
-                                    if(document.getString("Activo").equals("si"))
-                                        jcbactivo.setChecked(true);
-                                    else
-                                        jcbactivo.setChecked(false);
-                                    // Log.d(TAG, document.getId() + " => " + document.getData());
-                                }
-                            } else {
-                                //Log.w(TAG, "Error getting documents.", task.getException());
+                            if (task.isSuccessful()){
+                                for (QueryDocumentSnapshot document: task.getResult()) {
+                                    if (document.getString("Activo").equalsIgnoreCase("no")){
+                                        mensajeUsuario("El registro existe pero está inactivo");
+                                    }
+                                    else {
+                                        identPelicula = document.getId();
+                                        jetnombre.setText(document.getString("Nombre"));
+                                        if (document.getString("Genero").equalsIgnoreCase("Accion")){
+                                            jrbaccion.setChecked(true);
+                                        }
+                                        else {
+                                            if (document.getString("Genero").equalsIgnoreCase("Fantasia")){
+                                                jrbfantasia.setChecked(true);
+                                            }
+                                            else {
+                                                jrbsuspenso.setChecked(true);
+
+                                            }
+                                        }
+                                        if (document.getString("Activo").equalsIgnoreCase("si")){
+                                            jcbactivo.setChecked(true);
+                                        }
+                                        else {
+                                            jcbactivo.setChecked(false);
+                                        }
+                                    }
+                                    mensajeUsuario("La busqueda fue exitosa");
+                                    }
+
+                            }
+                            else {
+                                mensajeUsuario("No se encuentra registro");
                             }
                         }
                     });
@@ -130,48 +190,23 @@ public class MainActivity extends AppCompatActivity {
     public void Anular(View view){
         codigo=jetcodigo.getText().toString();
         nombre=jetnombre.getText().toString();
+
         if (codigo.isEmpty() || nombre.isEmpty()){
-            Toast.makeText(this, " Los campos son requeridos", Toast.LENGTH_SHORT).show();
-            jetcodigo.requestFocus();
+            mensajeUsuario("Todos los campos son requeridos");
         }
-        else{
-            if (respuesta == true) {
-                if (jrbaccion.isChecked())
-                    genero = "Accion";
-                else if (jrbfantasia.isChecked())
-                    genero = "Fantasia";
-                else
-                    genero = "Suspenso";
+        else {
+            genero = generoPelicula();
 
-                Map<String, Object> pelicula = new HashMap<>();
-                pelicula.put("Codigo", codigo);
-                pelicula.put("Nombre", nombre);
-                pelicula.put("Proximamente", "si");
+            //Crear
+            Map<String, Object> pelicula = contenido(codigo,nombre,genero,"no");
 
-// Add a new document with a generated ID
-            db.collection("Funciones")
-                    .add(pelicula)
-                    .addOnSuccessListener(new OnSuccessListener<DocumentReference>() {
-                        @Override
-                        public void onSuccess(DocumentReference documentReference) {
-                            //Log.d(TAG, "DocumentSnapshot added with ID: " + documentReference.getId());
-                            Toast.makeText(MainActivity.this, "Pelicula fuera de cartelera", Toast.LENGTH_SHORT).show();
-                            Limpiar_campos();
-                        }
-                    })
-                    .addOnFailureListener(new OnFailureListener() {
-                        @Override
-                        public void onFailure(@NonNull Exception e) {
-                            //Log.w(TAG, "Error adding document", e);
-                            Toast.makeText(MainActivity.this, "Error sacando película de cartelera", Toast.LENGTH_SHORT).show();
-                        }
-                    });
-            }
+            //Anular
+            peliculasBaseDatos("Funciones", pelicula, "set");
+            Limpiar_campos();
+
         }
-
-
-
     }
+
     public void Cancelar(View view){
         Limpiar_campos();
     }
@@ -180,8 +215,14 @@ public class MainActivity extends AppCompatActivity {
         jetnombre.setText("");
         jetcodigo.setText("");
         jrbaccion.setChecked(true);
+        jrbfantasia.setChecked(false);
+        jrbsuspenso.setChecked(false);
         jcbactivo.setChecked(false);
         respuesta=false;
         jetcodigo.requestFocus();
+    }
+
+    private void mensajeUsuario(String mensaje){
+        Toast.makeText(this, mensaje, Toast.LENGTH_SHORT).show();
     }
 }
