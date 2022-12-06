@@ -125,12 +125,13 @@ public class MainActivity extends AppCompatActivity {
             String genero = generoPelicula();
 
             // Create a new user with a first and last name
+
             Map<String, Object> pelicula = contenido(codigo,nombre,genero,"si");
+            System.out.println(pelicula);
 
             // Add a new document with a generated ID
             peliculasBaseDatos("Funciones", pelicula, "add");
             Limpiar_campos();
-
         }
     }
     ///error en el boton pue a buscar me saca de la app
