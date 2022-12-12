@@ -44,15 +44,13 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private Map<String,Object> contenido(String codigo, String nombre, String genero, String activo){
-        Map<String,Object> cartelera=new HashMap<>();
-
         Map<String, Object> pelicula = new HashMap<>();
         pelicula.put("Codigo", codigo);
         pelicula.put("Nombre", nombre);
         pelicula.put("Genero", genero);
         pelicula.put("Activo", activo);
 
-        return cartelera;
+        return pelicula;
     }
 
     private String generoPelicula(){
