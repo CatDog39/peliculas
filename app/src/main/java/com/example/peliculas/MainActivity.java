@@ -2,6 +2,7 @@ package com.example.peliculas;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+
 import android.os.Bundle;
 import android.view.View;
 import android.widget.CheckBox;
@@ -23,11 +24,11 @@ import java.util.Map;
 
 public class MainActivity extends AppCompatActivity {
 
-    EditText jetcodigo,jetnombre;
-    RadioButton jrbaccion,jrbfantasia,jrbsuspenso;
+    EditText jetcodigo, jetnombre;
+    RadioButton jrbaccion, jrbfantasia, jrbsuspenso;
     CheckBox jcbactivo;
-    String codigo,nombre,genero,identPelicula;
-    boolean respuesta;
+    String codigo, nombre, genero, identPelicula;
+    boolean respuesta = false;
     FirebaseFirestore db = FirebaseFirestore.getInstance();
 
     @Override
@@ -35,15 +36,15 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         getSupportActionBar().hide();
-        jetcodigo=findViewById(R.id.etcodigo);
-        jetnombre=findViewById(R.id.etnombre);
-        jrbaccion=findViewById(R.id.rbaccion);
-        jrbfantasia=findViewById(R.id.rbfantasia);
-        jrbsuspenso=findViewById(R.id.rbsuspenso);
-        jcbactivo=findViewById(R.id.cbactivo);
+        jetcodigo = findViewById(R.id.etcodigo);
+        jetnombre = findViewById(R.id.etnombre);
+        jrbaccion = findViewById(R.id.rbaccion);
+        jrbfantasia = findViewById(R.id.rbfantasia);
+        jrbsuspenso = findViewById(R.id.rbsuspenso);
+        jcbactivo = findViewById(R.id.cbactivo);
     }
 
-    private Map<String,Object> contenido(String codigo, String nombre, String genero, String activo){
+    private Map<String, Object> contenido(String codigo, String nombre, String genero, String activo) {
         Map<String, Object> pelicula = new HashMap<>();
         pelicula.put("Codigo", codigo);
         pelicula.put("Nombre", nombre);
@@ -53,9 +54,9 @@ public class MainActivity extends AppCompatActivity {
         return pelicula;
     }
 
-    private String generoPelicula(){
+    private String generoPelicula() {
         if (jrbaccion.isChecked())
-            genero="Accion";
+            genero = "Accion";
         else {
             if (jrbfantasia.isChecked())
                 genero = "Fantasia";
@@ -67,8 +68,8 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
-    private void peliculasBaseDatos(String nombreBaseDatos, Map<String,Object> documentoPelicula, String cambioActivo){
-        if (cambioActivo.equalsIgnoreCase("add")){
+    private void peliculasBaseDatos(String nombreBaseDatos, Map<String, Object> documentoPelicula, String cambioActivo) {
+        if (cambioActivo.equalsIgnoreCase("add")) {
             db.collection(nombreBaseDatos)
                     .add(documentoPelicula)
                     .addOnSuccessListener(new OnSuccessListener<DocumentReference>() {
@@ -86,8 +87,7 @@ public class MainActivity extends AppCompatActivity {
                             mensajeUsuario("Error al añadir pelicula");
                         }
                     });
-        }
-        else {
+        } else {
             db.collection(nombreBaseDatos)
                     .document(identPelicula)
                     .set(documentoPelicula)
@@ -110,21 +110,19 @@ public class MainActivity extends AppCompatActivity {
         }
 
 
-
     }
 
-    public void Adicionar(View view){
-        codigo=jetcodigo.getText().toString();
-        nombre=jetnombre.getText().toString();
-        if (codigo.isEmpty() || nombre.isEmpty()){
+    public void Adicionar(View view) {
+        codigo = jetcodigo.getText().toString();
+        nombre = jetnombre.getText().toString();
+        if (codigo.isEmpty() || nombre.isEmpty()) {
             mensajeUsuario("Los campos son obligatorios");
-        }
-        else{
+        } else {
             String genero = generoPelicula();
 
             // Create a new user with a first and last name
 
-            Map<String, Object> pelicula = contenido(codigo,nombre,genero,"si");
+            Map<String, Object> pelicula = contenido(codigo, nombre, genero, "si");
             System.out.println(pelicula);
 
             // Add a new document with a generated ID
@@ -132,52 +130,54 @@ public class MainActivity extends AppCompatActivity {
             Limpiar_campos();
         }
     }
+
     ///error en el boton pue a buscar me saca de la app
-    public void Consultar(View view){
-        codigo=jetcodigo.getText().toString();
+    public void Consultar(View view) {
+        respuesta = false;
+        codigo = jetcodigo.getText().toString();
         if (codigo.isEmpty()) {
             mensajeUsuario("Es necesario el código");
             jetcodigo.requestFocus();
-        }
-        else {
+        } else {
             db.collection("Funciones")
-                    .whereEqualTo("Codigo",codigo)
+                    .whereEqualTo("Codigo", codigo)
                     .get()
                     .addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
                         @Override
                         public void onComplete(@NonNull Task<QuerySnapshot> task) {
-                            if (task.isSuccessful()){
-                                for (QueryDocumentSnapshot document: task.getResult()) {
-                                    if (document.getString("Activo").equalsIgnoreCase("no")){
+                            if (task.isSuccessful()) {
+                                for (QueryDocumentSnapshot document : task.getResult()) {
+                                    respuesta = true;
+
+                                    if (document.getString("Activo").equalsIgnoreCase("no")) {
                                         mensajeUsuario("El registro existe pero está inactivo");
-                                    }
-                                    else {
+                                    } else {
                                         identPelicula = document.getId();
                                         jetnombre.setText(document.getString("Nombre"));
-                                        if (document.getString("Genero").equalsIgnoreCase("Accion")){
+                                        if (document.getString("Genero").equalsIgnoreCase("Accion")) {
                                             jrbaccion.setChecked(true);
-                                        }
-                                        else {
-                                            if (document.getString("Genero").equalsIgnoreCase("Fantasia")){
+                                        } else {
+                                            if (document.getString("Genero").equalsIgnoreCase("Fantasia")) {
                                                 jrbfantasia.setChecked(true);
-                                            }
-                                            else {
+                                            } else {
                                                 jrbsuspenso.setChecked(true);
-
                                             }
                                         }
-                                        if (document.getString("Activo").equalsIgnoreCase("si")){
+                                        if (document.getString("Activo").equalsIgnoreCase("si")) {
                                             jcbactivo.setChecked(true);
-                                        }
-                                        else {
+                                        } else {
                                             jcbactivo.setChecked(false);
                                         }
-                                    }
-                                    mensajeUsuario("La busqueda fue exitosa");
-                                    }
 
-                            }
-                            else {
+                                        mensajeUsuario("La busqueda fue exitosa");
+                                    }
+                                }
+
+                                if (!respuesta){
+                                    mensajeUsuario("Pelicula no encontrada");
+                                }
+
+                            } else {
                                 mensajeUsuario("No se encuentra registro");
                             }
                         }
@@ -186,27 +186,29 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
-    public void Anular(View view){
-        codigo=jetcodigo.getText().toString();
-        nombre=jetnombre.getText().toString();
+    public void Anular(View view) {
+        if (!respuesta){
+            mensajeUsuario("Primero debe consultar si la pelicula existe");
+        } else {
+            codigo = jetcodigo.getText().toString();
+            nombre = jetnombre.getText().toString();
 
-        if (codigo.isEmpty() || nombre.isEmpty()){
-            mensajeUsuario("Todos los campos son requeridos");
-        }
-        else {
-            genero = generoPelicula();
+            if (codigo.isEmpty() || nombre.isEmpty()) {
+                mensajeUsuario("Todos los campos son requeridos");
+            } else {
+                genero = generoPelicula();
 
-            //Crear
-            Map<String, Object> pelicula = contenido(codigo,nombre,genero,"no");
+                //Crear
+                Map<String, Object> pelicula = contenido(codigo, nombre, genero, "no");
 
-            //Anular
-            peliculasBaseDatos("Funciones", pelicula, "set");
-            Limpiar_campos();
-
+                //Anular
+                peliculasBaseDatos("Funciones", pelicula, "set");
+                Limpiar_campos();
+            }
         }
     }
 
-    public void Cancelar(View view){
+    public void Cancelar(View view) {
         Limpiar_campos();
     }
 
@@ -217,11 +219,11 @@ public class MainActivity extends AppCompatActivity {
         jrbfantasia.setChecked(false);
         jrbsuspenso.setChecked(false);
         jcbactivo.setChecked(false);
-        respuesta=false;
+        respuesta = false;
         jetcodigo.requestFocus();
     }
 
-    private void mensajeUsuario(String mensaje){
+    private void mensajeUsuario(String mensaje) {
         Toast.makeText(this, mensaje, Toast.LENGTH_SHORT).show();
     }
 }
